@@ -312,4 +312,10 @@ class RugbypassSpider(scrapy.Spider):
 			print(f"		       Team page {response.meta['url']} doesn't exist, returning")
 			return
 
-			
+		if "We're sorry," in response.css("h1.center::text").get():
+			print("		       No content in page, returning")
+			return
+
+
+
+		
