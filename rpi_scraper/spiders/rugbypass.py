@@ -62,7 +62,7 @@ class RugbypassSpider(scrapy.Spider):
 		self.logger.info(f"############### Initialising parse for tournament '{tournamet}' page ###############")
 
 		# send request to parse the match list of each season of the tournament
-		for season in response.css(".rounds-seasons.rounds-nav-select li a::text")[:2]:
+		for season in response.css(".rounds-seasons.rounds-nav-select li a::text")[-1:]:
 			
 			print(f"	  Sending request to parse match list of season '{season.get()}' in tournament '{tournamet}' page")
 			self.logger.info(f"############### Sending request to parse match list of season '{season.get()}' in tournament '{tournamet}' page ###############")
@@ -117,7 +117,7 @@ class RugbypassSpider(scrapy.Spider):
 
 		match_ids = response.css("div[class=game-round] div[itemscope] ::attr(data-id)").getall()
 
-		for match_id in match_ids[:1]:
+		for match_id in match_ids[:3]:
 		
 			#Extract basic match information into Match container
 			loader = ItemLoader(item=Match(), response=response)
@@ -221,6 +221,7 @@ class RugbypassSpider(scrapy.Spider):
 				'Conversions': 'conv_goals',
 				'Rucks won': 'rucks_won',
 				'Rucks lost': 'rucks_lost',
+				'Drop goals': 'drop_goals'
 			}
 
 	stat_bar_titles = {
@@ -280,6 +281,7 @@ class RugbypassSpider(scrapy.Spider):
 			for res in response.css("script::text"): 
 				if 'CirclesGraph' in res.get():
 					graph_details = res.get().replace(" window.scriptsToInit.push('new CirclesGraph(", '').split("\"team-")
+					#print(graph_details)
 					for graph in graph_details[1:]:
 						graph_split = graph.split(',')
 						stats_loader.add_value(
@@ -310,6 +312,10 @@ class RugbypassSpider(scrapy.Spider):
 			player_stats_sel = response.css(f"div.match-centre-stats-page-team.{home_or_away}.full-player-stats")
 			#print(player_stats_sel.css('table[data-index]').get())
 			#print(len(player_stats_sel.css('table[data-index]')))
+
+
+
+
 			stat_tables = []
 			team_name = ''
 			for index, stat_table in enumerate(player_stats_sel.css('table[data-index]')):
@@ -334,8 +340,21 @@ class RugbypassSpider(scrapy.Spider):
 								)
 			df = df.dropna().reset_index(drop=True)
 			
-			print(df)
-			df.to_csv('./df.csv')
+			#print(df)
+			#df.to_csv('./df.csv')
+			#for td in (player_stats_sel.css("table[data-index='0'] td.player-name")):
+			#	print(td.css("a"))
+
+			# Find player page links
+			#print(player_stats_sel.css("table[data-index='0']"))
+			for x in player_stats_sel.css("table[data-index='0'] td.player-name"):
+				print((x.css("::text")[1].get()))
+				print(x.css("a::attr(href)").get())
+			#[print(x.css("::text").get(), x.css("a::attr(href)").get()) for x in player_stats_sel.css("table[data-index='0'] td.player-name")]
+			#print(player_stats_sel.css("table[data-index] td.player-name").get())
+
+
+
 
 			#df = pd.DataFrame(stat_tables)
 			#print(df)
