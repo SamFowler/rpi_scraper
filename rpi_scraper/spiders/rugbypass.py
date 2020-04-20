@@ -333,26 +333,25 @@ class RugbypassSpider(scrapy.Spider):
 			#print((stat_tables[0].keys()))
 			#df = pd.DataFrame.from_records(stat_tables)
 			df = pd.concat(stat_tables, axis=1)
-			df.rename(columns={df.keys()[0]: 'ShirtNumber',
-								df.keys()[1]: 'PlayerName'
+			df.rename(columns={df.keys()[0]: 'shirt_number',
+								df.keys()[1]: 'player_name'
 								},
 								inplace=True
 								)
 			df = df.dropna().reset_index(drop=True)
 			
-			#print(df)
-			#df.to_csv('./df.csv')
-			#for td in (player_stats_sel.css("table[data-index='0'] td.player-name")):
-			#	print(td.css("a"))
-
 			# Find player page links
-			#print(player_stats_sel.css("table[data-index='0']"))
+			url_list = []
 			for x in player_stats_sel.css("table[data-index='0'] td.player-name"):
-				print((x.css("::text")[1].get()))
-				print(x.css("a::attr(href)").get())
-			#[print(x.css("::text").get(), x.css("a::attr(href)").get()) for x in player_stats_sel.css("table[data-index='0'] td.player-name")]
-			#print(player_stats_sel.css("table[data-index] td.player-name").get())
+				url_list.append(x.css("a::attr(href)").get() if x.css("a::attr(href)").get() else '')
 
+			df['url'] = url_list
+			print(df)
+			df.to_csv('./df.csv')
+
+
+			#start player stats item loader
+			#ps_loader = ItemLoader(item=PlayerStats(), response=response)
 
 
 
