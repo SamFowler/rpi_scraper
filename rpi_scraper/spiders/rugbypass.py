@@ -5,8 +5,9 @@ from urllib.parse import urljoin
 
 from scrapy.loader import ItemLoader
 
-from rpi_scraper.items import Match, MatchScore, MatchStats
+from rpi_scraper.items import Match, MatchScore, MatchStats, PlayerStats
 
+import pandas as pd
 
 class RugbypassSpider(scrapy.Spider):
 	"""Main spider of the scraper."""
@@ -151,17 +152,17 @@ class RugbypassSpider(scrapy.Spider):
 		#
 
 		#Send requests to team pages. Could do this later to save requesting the same team multiple times?
-		team_page_urls = set(response.css("a.name.team-link::attr(href)").getall())#
-		for team_page_url in team_page_urls:
+		#team_page_urls = set(response.css("a.name.team-link::attr(href)").getall())#
+		#for team_page_url in team_page_urls:
 			#print(f"{team_page_url}/statistics")
 			#if 'teams' in team_page_url.split('/')[-1]:
 			#	continue
-			yield response.follow(
-				url = f"{team_page_url}/statistics",
-				callback = self.team_page_parse,
+		#	yield response.follow(
+		#		url = f"{team_page_url}/statistics",
+		#		callback = self.team_page_parse,
 				#dont_redirect=True,
-				meta = {'url': team_page_url}
-			) 
+		#		meta = {'url': team_page_url}
+		#	) 
 
 
 
@@ -255,6 +256,7 @@ class RugbypassSpider(scrapy.Spider):
 			Example url parsed: https://www.rugbypass.com/live/{tournament}/{match_name}/{season}/stats
 		"""
 		match = response.meta['match']
+		print(f"		  {response.url}")
 		print(f"		  [{match['match_id'][0]}] Parsing match stats page")
 		self.logger.info(f"############### [{match['match_id'][0]}]Parsing match stats page ###############")
 
@@ -265,6 +267,8 @@ class RugbypassSpider(scrapy.Spider):
 
 		for index, team_id in enumerate([match['home_team_id'], match['away_team_id']]):
 
+
+			####### Collect match stats #######
 			#Create MatchStats loader
 			stats_loader = ItemLoader(item=MatchStats(), response=response)
 			stats_loader = stats_loader.nested_css(f"[data-id='{match['match_id'][0]}']")
@@ -298,6 +302,67 @@ class RugbypassSpider(scrapy.Spider):
 			#print(match_stats)
 			print(f"		  [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object")
 			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object ###############")
+
+
+			####### Collect player stats #######
+			# Create player stats loader 
+
+			player_stats_sel = response.css(f"div.match-centre-stats-page-team.{home_or_away}.full-player-stats")
+			#print(player_stats_sel.css('table[data-index]').get())
+			#print(len(player_stats_sel.css('table[data-index]')))
+			stat_tables = []
+			team_name = ''
+			for index, stat_table in enumerate(player_stats_sel.css('table[data-index]')):
+				#print(stat_table, '\n')
+				#print(pd.read_html(stat_table.get(), index_col=1)[0], '\n')
+				df = pd.read_html(stat_table.get())[0]
+				if index != 0:
+					df.drop([df.keys()[0], df.keys()[1]], axis=1, inplace=True)
+				
+
+				stat_tables.append(df)
+
+
+
+			#print((stat_tables[0].keys()))
+			#df = pd.DataFrame.from_records(stat_tables)
+			df = pd.concat(stat_tables, axis=1)
+			df.rename(columns={df.keys()[0]: 'ShirtNumber',
+								df.keys()[1]: 'PlayerName'
+								},
+								inplace=True
+								)
+			df = df.dropna().reset_index(drop=True)
+			
+			print(df)
+			df.to_csv('./df.csv')
+
+			#df = pd.DataFrame(stat_tables)
+			#print(df)
+			#df = pd.concat(stat_tables, axis=1, sort=False)
+			#print(df)
+
+			#print(type(stat_tables))
+			#print(type(stat_tables[0]))
+			#df = stat_tables[0].join(stat_tables[1], how='left')
+			#print(df)
+
+			#player_stats = pd.DataFrame
+			#player_stats = [player_stats.join(st) for st in stat_tables]
+			#df = pd.merge(stat_tables[0], stat_tables[1])
+			#print(df)
+
+			#for stat_table in player_stats_sel.css('table[data-index] td.player-name::text'):
+			#	print((stat_table))
+
+			#for stat_table in player_stats_sel
+
+			#ps_loader = ItemLoader(item=PlayerStats(), response=response)
+			#ps_loader.add_value('match_id', match['match_id'])
+
+			#ps_loader = ps_loader.nested_css(f"dv.match-centre-stats-page-team.{home_or_away}.full-player-stats")
+
+
 
 
 	def team_page_parse(self,response):
