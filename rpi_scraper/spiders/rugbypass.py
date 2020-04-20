@@ -301,10 +301,15 @@ class RugbypassSpider(scrapy.Spider):
 
 
 	def team_page_parse(self,response):
-		"""
-
+		"""	
+			Call function to parse a team page.
+			Example url parsed: https://www.rugbypass.com/{tournament}/teams/{team}
 		"""
 		print(f"		    Parsing team page {response.url}")#
+		
+		# Return if team page redirected (team page doesn't exist any more)
 		if response.url.split('/')[-1] is '':
 			print(f"		       Team page {response.meta['url']} doesn't exist, returning")
 			return
+
+			
