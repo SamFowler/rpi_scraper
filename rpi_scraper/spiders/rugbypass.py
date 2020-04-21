@@ -251,6 +251,39 @@ class RugbypassSpider(scrapy.Spider):
 				'Yellow cards': 'yellow_cards'
 				}
 
+	player_stat_names = {
+				'name_id':'player_id',
+				'tries': 'tries',
+				'C': 'conv_goals',
+				'PG': 'pen_goals',
+				'DG': 'drop_goals',
+				'': 'minutes',
+				'player_name': 'name',
+				'shirt_number': 'shirt_number',
+				'carries': 'carries',
+				'M': 'metres',
+				'CB': 'clean_breaks',
+				'': 'drop_goals_missed',
+				'BD': 'defenders_beaten',
+				'T': 'tackles_made',
+				'MT': 'tackles_missed',
+				'turns_w': 'turnovers_won',
+				'TC': 'turnovers_conceded',
+				'PC': 'pens_conceded',
+				'': 'pens_conceded_atk',
+				'': 'pens_conceded_def',
+				'P': 'passes',
+				'O': 'offloads',
+				'TA': 'try_assists',
+				'K': 'kicks_from_hand',
+				'TW': 'lineout_throw_won_clean',
+				'LW': 'lineout_throw_won',
+				'LS': 'lineout_won_steal',
+				'Pts': 'points',
+				'RC': 'red_cards',
+				'YC': 'yellow_cards'
+				}
+
 	def match_stats_page_parse(self, response):
 		"""
 			Callback function to handle parsing of match STATS page.
@@ -306,32 +339,29 @@ class RugbypassSpider(scrapy.Spider):
 			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object ###############")
 
 
+
+
 			####### Collect player stats #######
 			# Create player stats loader 
 
 			player_stats_sel = response.css(f"div.match-centre-stats-page-team.{home_or_away}.full-player-stats")
-			#print(player_stats_sel.css('table[data-index]').get())
-			#print(len(player_stats_sel.css('table[data-index]')))
-
-
-
 
 			stat_tables = []
 			team_name = ''
+
+			#Read player stats table from hrml using DataFrame
 			for index, stat_table in enumerate(player_stats_sel.css('table[data-index]')):
-				#print(stat_table, '\n')
-				#print(pd.read_html(stat_table.get(), index_col=1)[0], '\n')
 				df = pd.read_html(stat_table.get())[0]
 				if index != 0:
 					df.drop([df.keys()[0], df.keys()[1]], axis=1, inplace=True)
-				
+				else:
+					df.rename(columns={'T': 'tries', 'C': 'carries'}, inplace=True)
+
+				if index == 1:
+					df.rename(columns={'TW': 'turns_w'}, inplace=True)
 
 				stat_tables.append(df)
 
-
-
-			#print((stat_tables[0].keys()))
-			#df = pd.DataFrame.from_records(stat_tables)
 			df = pd.concat(stat_tables, axis=1)
 			df.rename(columns={df.keys()[0]: 'shirt_number',
 								df.keys()[1]: 'player_name'
@@ -346,41 +376,24 @@ class RugbypassSpider(scrapy.Spider):
 				url_list.append(x.css("a::attr(href)").get() if x.css("a::attr(href)").get() else '')
 
 			df['url'] = url_list
+			df['name_id'] = df['player_name'].apply(lambda s: "-".join(s.split(' ')).lower())
+			#df['']
+
 			print(df)
-			df.to_csv('./df.csv')
+			#df.to_csv('./df.csv')
 
+			# Convert player DataFrame into PlayerStats scrapy Items
+			for ind, row in df.iterrows():
+				player_stats_loader = ItemLoader(item=PlayerStats(), response=response)
+				for key in self.player_stat_names.keys() & df.keys():
+					player_stats_loader.add_value(self.player_stat_names[key], row[key])
 
-			#start player stats item loader
-			#ps_loader = ItemLoader(item=PlayerStats(), response=response)
+				player_stats_loader.add_value('starter', 'Y' if int(row['shirt_number']) < 16 else 'N')
+				player_stats_loader.add_value('team_id', team_id[0])
+				player_stats_loader.add_value('match_id', match['match_id'])
 
-
-
-			#df = pd.DataFrame(stat_tables)
-			#print(df)
-			#df = pd.concat(stat_tables, axis=1, sort=False)
-			#print(df)
-
-			#print(type(stat_tables))
-			#print(type(stat_tables[0]))
-			#df = stat_tables[0].join(stat_tables[1], how='left')
-			#print(df)
-
-			#player_stats = pd.DataFrame
-			#player_stats = [player_stats.join(st) for st in stat_tables]
-			#df = pd.merge(stat_tables[0], stat_tables[1])
-			#print(df)
-
-			#for stat_table in player_stats_sel.css('table[data-index] td.player-name::text'):
-			#	print((stat_table))
-
-			#for stat_table in player_stats_sel
-
-			#ps_loader = ItemLoader(item=PlayerStats(), response=response)
-			#ps_loader.add_value('match_id', match['match_id'])
-
-			#ps_loader = ps_loader.nested_css(f"dv.match-centre-stats-page-team.{home_or_away}.full-player-stats")
-
-
+				#print(player_stats_loader.load_item())
+				#print()
 
 
 	def team_page_parse(self,response):

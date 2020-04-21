@@ -188,13 +188,47 @@ class PlayerStats(Item):
 	player_id = Field()
 	team_id = Field()
 	match_id = Field()
-	position = Field()
-	number = Field()
+
+	name = Field()
+	shirt_number = Field()
 	starter = Field()
+
 	tries = Field()
-	cons = Field()
-	pens = Field()
-	drops = Field()
+	conv_goals = Field()
+	pen_goals = Field()
+	drop_goals = Field()
+
+	minutes = Field()
+
+	carries = Field()
+	metres = Field()
+	clean_breaks = Field()
+	line_break = Field()
+	defenders_beaten = Field()
+
+	tackles_made = Field()
+	tackles_missed = Field()
+	turnovers_won = Field()
+	turnovers_conceded = Field()
+
+	pens_conceded = Field()
+	pens_conceded_atk = Field()
+	pens_conceded_def = Field()
+	yellow_cards = Field()
+	red_cards = Field()
+	
+	passes = Field()
+	offloads = Field()
+	try_assists = Field()
+	kicks_from_hand = Field()
+
+	lineout_throw_won_clean = Field()
+	lineout_throw_won = Field()
+	lineout_won_steal = Field()
+
+	points = Field()
+
+
 
 class PlayerExtraStats(Item):
 	"""
