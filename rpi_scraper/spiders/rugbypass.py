@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 from scrapy.loader import ItemLoader
 
-from rpi_scraper.items import Match, MatchScore, MatchStats, PlayerStats
+from rpi_scraper.items import Match, MatchScore, MatchStats, PlayerStats, Player, PlayerRPI
 
 import pandas as pd
 
@@ -376,10 +376,10 @@ class RugbypassSpider(scrapy.Spider):
 				url_list.append(x.css("a::attr(href)").get() if x.css("a::attr(href)").get() else '')
 
 			df['url'] = url_list
-			df['name_id'] = df['player_name'].apply(lambda s: "-".join(s.split(' ')).lower())
+			df['name_id'] = df['player_name'].apply(lambda s: "-".join(s.split(' ')).lower().replace("'", ''))
 			#df['']
 
-			print(df)
+			#print(df)
 			#df.to_csv('./df.csv')
 
 			# Convert player DataFrame into PlayerStats scrapy Items
@@ -391,14 +391,33 @@ class RugbypassSpider(scrapy.Spider):
 				player_stats_loader.add_value('starter', 'Y' if int(row['shirt_number']) < 16 else 'N')
 				player_stats_loader.add_value('team_id', team_id[0])
 				player_stats_loader.add_value('match_id', match['match_id'])
-
+				#print(row)
 				#print(player_stats_loader.load_item())
-				#print()
+				#print(player_stats_loader.load_item()['player_id'][0])
 
+				yield response.follow(
+					url = row['url'],
+					callback = self.player_page_parse,
+					meta = {'player_id': row['name_id']}
+					) 
+
+
+			print(f"		      [{match['match_id'][0]}][{team_id[0]}] Created and filled {home_or_away} team PlayerStats objects")
+			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled {home_or_away} team PlayerStats objects ###############")
+
+
+				
+			#print(url_list)
+			#for url in url_list:
+			#	yield response.follow(
+			#		url = url,
+			#		callback = self.player_page_parse,
+			#		meta = {'player_id'}
+			#		) 
 
 	def team_page_parse(self,response):
 		"""	
-			Call function to parse a team page.
+			Callback function to parse a team page.
 			Example url parsed: https://www.rugbypass.com/{tournament}/teams/{team}
 		"""
 		print(f"		    Parsing team page {response.url}")#
@@ -413,5 +432,90 @@ class RugbypassSpider(scrapy.Spider):
 			return
 
 
+	def player_page_parse(self, response):
+		"""	
+			Callback function to parse a player home page.
+			Example url parsed: https://www.rugbypass.com/{tournament}/teams/{team}/players/{player_name}
+		"""
 
+		#print(f"		    Parsing player page {response.url} [{response.url.split('/')[-1]}]")#
+
+		#check player page exists
+		split_url = response.url.split('/')
+		if split_url[-1] is 'teams' or split_url[-1] is 'players':
+			print(f"		    Player page {response.url} does not exist, returning")
+			return
+
+
+		print(f"		    Parsing player page [{response.url.split('/')[-1]}]")
+
+
+		player_name = split_url[-1]
+		team_name = split_url[-3]
+		tournament_name = split_url[-5]
+		index_url = f"https://index.rugbypass.com/rpi/{tournament_name}/{team_name}/{player_name}"
+
+		yield response.follow(
+					url = index_url,
+					callback = self.player_index_page_parse,
+					meta = response.meta
+					) 
+
+
+	def player_index_page_parse(self, response):
+		"""	
+			Callback function to parse a player index home page.
+			Example url parsed: https://index.rugbypass.com/rpi/{tournament}/{team}/{player_name}
+		"""
+
+
+
+		print(f"		        Player index page [{response.url}]")
+
+		player_loader = ItemLoader(item=Player(), response=response)
+		player_loader.add_value('positions', response.css("div.positions::text").get().strip())
+		#player_loader.nested_css("div.col.col-3.hide-990")
 		
+		#for measurement in response.css("div.measurement h2::text").get().strip()
+		measurements = response.css("div.col.col-3.hide-990 div.measurement ::text").getall()
+		player_loader.add_value('height', measurements[2].strip())
+		player_loader.add_value('weight', measurements[5].strip())
+		player_loader.add_value('dob', measurements[8].strip())
+		player_loader.add_value('player_id', response.meta['player_id'])
+
+
+		teams = response.css("div.col.col-3.hide-990 div.player-teams span.title::text").getall()
+		teams = ", ".join(map(lambda x: x.strip(), teams))
+		player_loader.add_value('teams', teams)
+
+
+		#print(player_loader.load_item())
+
+
+		#find RPI history chart
+		for res in response.css("div#content script::text"):
+			#print(res)
+			if "RPIPlayerView" in res.get():
+				scriptText = res.get()
+				scriptText = scriptText.split(""""entries":[{""")[1].split("""}]};'); window.scriptsToInit.push""")[0]
+				scriptText = scriptText.split("},{")
+
+				rpi_item = self.create_player_rpi_item(entry=scriptText[-1], player_id=response.meta['player_id'], latest=True)
+				for entry in scriptText[:-1]:
+					rpi_item = self.create_player_rpi_item(entry=entry, player_id=response.meta['player_id'], latest=False)
+
+
+	def create_player_rpi_item(self, entry, player_id, latest):
+		entry = entry.replace("\"", '').replace("{", '').replace("}", '')
+		
+		entry = entry.split(',')
+		details = [s.split(':')[-1] for s in entry]
+
+		rpi_loader = ItemLoader(item=PlayerRPI())
+		rpi_loader.add_value('date', f"{details[0]}-{details[1]}-{details[2]}")
+		rpi_loader.add_value('score', details[4])
+		rpi_loader.add_value('change', details[5])
+		rpi_loader.add_value('player_id', player_id)
+		rpi_loader.add_value('latest', 'Y' if latest == True else 'N')
+		#print(rpi_loader.load_item())
+		return rpi_loader.load_item()
