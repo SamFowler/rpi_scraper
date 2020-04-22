@@ -162,9 +162,7 @@ class Player(Item):
 	"""
 
 	player_id = Field()
-	url_name = Field()
-	full_name  = Field()
-	birthday  = Field()
+	dob  = Field()
 	height = Field()
 	weight = Field()
 	teams = Field()
@@ -177,8 +175,9 @@ class PlayerRPI(Item):
 
 	player_id = Field()
 	date = Field()
-	rpi = Field()
-	core_stats = Field()
+	score = Field()
+	change = Field()
+	latest = Field()
 
 class PlayerStats(Item):
 	"""
