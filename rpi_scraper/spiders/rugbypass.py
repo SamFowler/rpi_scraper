@@ -233,7 +233,7 @@ class RugbypassSpider(scrapy.Spider):
 				'Turnovers conceded': 'turnovers_conceded',
 				'Missed tackles': 'tackles_missed',
 				'Turnovers won': 'turnovers_won',
-				'Conversions missed': 'conversions_missed',
+				'Conversions missed': 'conv_goals_missed',
 				'Penalty goals': 'pen_goals',
 				'Penalty goals missed': 'pen_goals_missed',
 				'Drop goals': 'drop_goals',
@@ -313,13 +313,15 @@ class RugbypassSpider(scrapy.Spider):
 			team_is_away_team = index
 			for res in response.css("script::text"): 
 				if 'CirclesGraph' in res.get():
-					graph_details = res.get().replace(" window.scriptsToInit.push('new CirclesGraph(", '').split("\"team-")
-					#print(graph_details)
-					for graph in graph_details[1:]:
-						graph_split = graph.split(',')
+					#print("|"+res.get()+"|")
+					graph_details = res.get().replace(" window.scriptsToInit.push('new CirclesGraph", '').strip("()'; ").split(");');(")
+					for details in graph_details:
+						details_spl = details.split(',')
+						stat_type = details_spl[1].strip("\" ")
+						stat_value = details_spl[2+team_is_away_team].strip("\" ")
 						stats_loader.add_value(
-							self.circle_graph_titles[graph_split[1].strip("\"")], 
-							graph_split[1].strip("\"")
+							self.circle_graph_titles[stat_type], 
+							stat_value
 						)
 
 			# 2) Collect match stats from stat bar "graphs" on match stats page
@@ -337,7 +339,6 @@ class RugbypassSpider(scrapy.Spider):
 			#print(match_stats)
 			print(f"		  [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object")
 			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object ###############")
-
 
 
 
@@ -405,7 +406,6 @@ class RugbypassSpider(scrapy.Spider):
 
 			print(f"		      [{match['match_id'][0]}][{team_id[0]}] Created and filled {home_or_away} team PlayerStats objects")
 			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled {home_or_away} team PlayerStats objects ###############")
-
 
 				
 			#print(url_list)
