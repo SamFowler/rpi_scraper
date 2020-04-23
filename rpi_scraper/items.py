@@ -95,7 +95,6 @@ class MatchStats(Item):
 	points = Field()
 
 	tries = Field()
-	conv_goals = Field()
 	pen_goals = Field()
 	drop_goals = Field()
 
@@ -120,8 +119,8 @@ class MatchStats(Item):
 
 	#kicking
 	kicks_in_play = Field()
-	conversions = Field()
-	conversions_missed = Field()
+	conv_goals = Field()
+	conv_goals_missed = Field()
 	pen_goals = Field()
 	pen_goals_missed = Field()
 	drop_goals = Field()
