@@ -32,15 +32,15 @@ class Match(Item):
 	match_id = Field()
 
 	home_team_id = Field()
-	home_team_name = Field()
+	#home_team_name = Field()
 	away_team_id = Field()
-	away_team_name = Field()
+	#away_team_name = Field()
 
 	status = Field()
 
-	stadium = Field()
-	winner = Field()
-	match_type = Field()
+	#stadium = Field()
+	#winner = Field()
+	#match_type = Field()
 
 	tournament = Field()
 	season = Field()
@@ -52,18 +52,17 @@ class Match(Item):
 	description = Field()
 	rugbypass_price = Field()
 	rugbypass_price_curr = Field()
-	comp = Field()
-	comp_date = Field()
-	score_home = Field()
-	score_away = Field()
+	#comp = Field()
+	#comp_date = Field()
+	#score_home = Field()
+	#score_away = Field()
 	title = Field()
 
 
-	referee = Field()
-	attendance = Field()
+	#referee = Field()
+	#attendance = Field()
 
-	tournament = Field()
-	season = Field()
+
 
 class MatchScore(Item):
 	"""
