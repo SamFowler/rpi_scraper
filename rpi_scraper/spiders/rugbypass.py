@@ -131,7 +131,7 @@ class RugbypassSpider(scrapy.Spider):
 			match_loader.add_value('season', response.meta['season'])
 			#fetch match data
 			match = match_loader.load_item()
-
+			yield match
 
 			#Send request to parsed match page
 			url = response.css(f"[data-id='{match_id}'] a.link-box::attr(href)").get()
@@ -333,7 +333,7 @@ class RugbypassSpider(scrapy.Spider):
 						stat_bar.css(f"div.{home_or_away}::text").get()
 						)
 
-			match_stats = stats_loader.load_item()
+			yield stats_loader.load_item()
 			#print(match_stats)
 			print(f"		  [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object")
 			self.logger.info(f"############### [{match['match_id'][0]}][{team_id[0]}] Created and filled MatchStats object ###############")
@@ -391,6 +391,7 @@ class RugbypassSpider(scrapy.Spider):
 				player_stats_loader.add_value('starter', 'Y' if int(row['shirt_number']) < 16 else 'N')
 				player_stats_loader.add_value('team_id', team_id[0])
 				player_stats_loader.add_value('match_id', match['match_id'])
+				yield player_stats_loader.load_item()
 				#print(row)
 				#print(player_stats_loader.load_item())
 				#print(player_stats_loader.load_item()['player_id'][0])
@@ -488,7 +489,7 @@ class RugbypassSpider(scrapy.Spider):
 		teams = ", ".join(map(lambda x: x.strip(), teams))
 		player_loader.add_value('teams', teams)
 
-
+		yield player_loader.load_item()
 		#print(player_loader.load_item())
 
 
@@ -500,9 +501,10 @@ class RugbypassSpider(scrapy.Spider):
 				scriptText = scriptText.split(""""entries":[{""")[1].split("""}]};'); window.scriptsToInit.push""")[0]
 				scriptText = scriptText.split("},{")
 
-				rpi_item = self.create_player_rpi_item(entry=scriptText[-1], player_id=response.meta['player_id'], latest=True)
+				yield self.create_player_rpi_item(entry=scriptText[-1], player_id=response.meta['player_id'], latest=True)
 				for entry in scriptText[:-1]:
-					rpi_item = self.create_player_rpi_item(entry=entry, player_id=response.meta['player_id'], latest=False)
+					yield self.create_player_rpi_item(entry=entry, player_id=response.meta['player_id'], latest=False)
+
 
 
 	def create_player_rpi_item(self, entry, player_id, latest):
