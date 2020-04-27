@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 from scrapy.loader import ItemLoader
 
 from rpi_scraper.items import Match, MatchScore, MatchStats, PlayerStats, Player, PlayerRPI
-from rpi_scraper.loader import PlayerStatsLoader
+from rpi_scraper.loader import PlayerStatsLoader, MatchStatsLoader
 
 import pandas as pd
 
@@ -305,16 +305,22 @@ class RugbypassSpider(scrapy.Spider):
 
 			####### Collect match stats #######
 			#Create MatchStats loader
-			stats_loader = ItemLoader(item=MatchStats(), response=response)
+			stats_loader = MatchStatsLoader(item=MatchStats(), response=response)
 			stats_loader = stats_loader.nested_css(f"[data-id='{match['match_id'][0]}']")
 			stats_loader.add_value('team_id', team_id[0])
 			stats_loader.add_value('match_id', match['match_id'])
 
-			# 1) Collect match stats from circle graphs on match stats page
+			home_or_away = 'home' if index==0 else 'away'
+
+			# 1) Parse match score
+
+			#print(response.css(f"div.{home_or_away}.team-{home_or_away}-score::text").get().strip())
+			stats_loader.add_value('score', response.css(f"div.{home_or_away}.team-{home_or_away}-score::text").get().strip())
+
+			# 2) Collect match stats from circle graphs on match stats page
 			team_is_away_team = index
 			for res in response.css("script::text"): 
 				if 'CirclesGraph' in res.get():
-					#print("|"+res.get()+"|")
 					graph_details = res.get().replace(" window.scriptsToInit.push('new CirclesGraph", '').strip("()'; ").split(");');(")
 					for details in graph_details:
 						details_spl = details.split(',')
@@ -325,12 +331,12 @@ class RugbypassSpider(scrapy.Spider):
 							stat_value
 						)
 
-			# 2) Collect match stats from stat bar "graphs" on match stats page
-			home_or_away = 'home' if index==0 else 'away'
+			# 3) Collect match stats from stat bar "graphs" on match stats page
 			stat_bars = response.css("div.stat-bars-item")
 			for stat_bar in stat_bars:
 				bar_text = stat_bar.css("div.label::text").get().strip()
 				if bar_text in self.stat_bar_titles:
+
 					stats_loader.add_value(
 						self.stat_bar_titles[bar_text], 
 						stat_bar.css(f"div.{home_or_away}::text").get()

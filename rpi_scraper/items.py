@@ -72,7 +72,7 @@ class MatchScore(Item):
 	match_id = Field()
 	team_id = Field()
 
-	points = Field()
+	score = Field()
 	conceded = Field()
 
 	tries = Field()
@@ -92,7 +92,7 @@ class MatchStats(Item):
 	team_id = Field()
 
 
-	points = Field()
+	score = Field()
 
 	tries = Field()
 	pen_goals = Field()
