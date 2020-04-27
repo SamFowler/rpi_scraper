@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 from scrapy.loader import ItemLoader
 
 from rpi_scraper.items import Match, MatchScore, MatchStats, PlayerStats, Player, PlayerRPI
+from rpi_scraper.loader import PlayerStatsLoader
 
 import pandas as pd
 
@@ -19,9 +20,9 @@ class RugbypassSpider(scrapy.Spider):
 	#custom params
 	start_domain = 'https://www.rugbypass.com/'
 
-	tournaments = ['internationals', 'premiership']#'currie-cup'] #, 'european-champions-cup', 'mitre-10-cup',
-					#'pro-14', 'the-rugby-championship', 'rugby-world-cup', 
-					#'sevens', 'six-nations', 'super-rugby', 'top-14']
+	tournaments = ['internationals', 'premiership', 'currie-cup' , 'european-champions-cup', 'mitre-10-cup',
+					'pro-14', 'the-rugby-championship', 'rugby-world-cup', 
+					'sevens', 'six-nations', 'super-rugby', 'top-14']
 
 	def get_tournament_url(self, tournament):
 		#returns url to tournament page
@@ -62,7 +63,7 @@ class RugbypassSpider(scrapy.Spider):
 		self.logger.info(f"############### Initialising parse for tournament '{tournamet}' page ###############")
 
 		# send request to parse the match list of each season of the tournament
-		for season in response.css(".rounds-seasons.rounds-nav-select li a::text")[-1:]:
+		for season in response.css(".rounds-seasons.rounds-nav-select li a::text"):
 			
 			print(f"	  Sending request to parse match list of season '{season.get()}' in tournament '{tournamet}' page")
 			self.logger.info(f"############### Sending request to parse match list of season '{season.get()}' in tournament '{tournamet}' page ###############")
@@ -70,7 +71,7 @@ class RugbypassSpider(scrapy.Spider):
 			yield response.follow(
 				url = f"matches/{season.get()}", 
 				callback = self.season_matches_parse,
-				dont_filter=True,
+				#dont_filter=True,
 				meta = ({
 						'tournament': tournamet, 
 						 'season': season.get()
@@ -117,7 +118,7 @@ class RugbypassSpider(scrapy.Spider):
 
 		match_ids = response.css("div[class=game-round] div[itemscope] ::attr(data-id)").getall()
 
-		for match_id in match_ids[:3]:
+		for match_id in match_ids:
 		
 			#Extract basic match information into Match container
 			loader = ItemLoader(item=Match(), response=response)
@@ -385,7 +386,7 @@ class RugbypassSpider(scrapy.Spider):
 
 			# Convert player DataFrame into PlayerStats scrapy Items
 			for ind, row in df.iterrows():
-				player_stats_loader = ItemLoader(item=PlayerStats(), response=response)
+				player_stats_loader = PlayerStatsLoader(item=PlayerStats(), response=response)
 				for key in self.player_stat_names.keys() & df.keys():
 					player_stats_loader.add_value(self.player_stat_names[key], row[key])
 

@@ -47,8 +47,8 @@ class RpiScraperCSVPipeline(object):
 
 		exporter.export_item(item)
 		#print(f'Exported {type(item).__name__} item')
-		if isinstance(item, items.Latch):
-			print(item)
+		#if isinstance(item, items.Latch):
+		#	print(item)
 		#	print('exporting match')
 		#	self.exporter.export_item(item)
 		return item
